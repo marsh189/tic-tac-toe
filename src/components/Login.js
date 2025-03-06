@@ -9,7 +9,7 @@ function Login({ setIsAuth }) {
   const [password, setPassword] = useState('');
 
   const login = () => {
-    Axios.post(process.env.REACT_APP_API_URL + '/login', {
+    Axios.post(process.env.REACT_APP_LOCAL_URL + '/login', {
       username,
       password,
     }).then((res) => {

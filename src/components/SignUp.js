@@ -7,24 +7,26 @@ function SignUp({ setIsAuth }) {
   const [user, setUser] = useState(null);
 
   const signUp = () => {
-    Axios.post(process.env.REACT_APP_API_URL + '/signup', user).then((res) => {
-      const error = res.data.message;
-      if (error) {
-        alert('username already exists');
-        return;
-      }
-      console.log(res.data);
-      const { token, userId, firstName, lastName, username, hashedPassword } =
-        res.data;
+    Axios.post(process.env.REACT_APP_LOCAL_URL + '/signup', user).then(
+      (res) => {
+        const error = res.data.message;
+        if (error) {
+          alert('username already exists');
+          return;
+        }
+        console.log(res.data);
+        const { token, userId, firstName, lastName, username, hashedPassword } =
+          res.data;
 
-      cookies.set('token', token);
-      cookies.set('userId', userId);
-      cookies.set('username', username);
-      cookies.set('firstName', firstName);
-      cookies.set('lastName', lastName);
-      cookies.set('hashedPassword', hashedPassword);
-      setIsAuth(true);
-    });
+        cookies.set('token', token);
+        cookies.set('userId', userId);
+        cookies.set('username', username);
+        cookies.set('firstName', firstName);
+        cookies.set('lastName', lastName);
+        cookies.set('hashedPassword', hashedPassword);
+        setIsAuth(true);
+      }
+    );
   };
   return (
     <div className="signUp">
