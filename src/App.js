@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import './index.css';
 import { io } from 'socket.io-client';
 
-const socket = io('http://localhost:5000');
+const socket = io('https://tic-tac-toe-server-xysi.onrender.com');
 
 const App = () => {
   const [game, setGame] = useState({
