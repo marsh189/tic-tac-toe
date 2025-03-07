@@ -1,148 +1,126 @@
 import { useEffect, useState } from 'react';
-import Square from './Square';
-import { useChannelStateContext, useChatContext } from 'stream-chat-react';
+import { io } from 'socket.io-client';
 import { Patterns } from '../WinningPatters';
 
-function Board({ result, setResult }) {
-  const [board, setBoard] = useState(['', '', '', '', '', '', '', '', '']);
-  const [player, setPlayer] = useState('X');
-  const [turn, setTurn] = useState('X');
-  const { channel } = useChannelStateContext();
-  const { client } = useChatContext();
+function Board({ setIsAuth, setUser, user }) {
+  const socket = io(process.env.REACT_APP_LOCAL_URL);
+
+  const [game, setGame] = useState({
+    board: Array(9).fill(null),
+    currentPlayer: 'X',
+  });
+  const [errorMessage, setErrorMessage] = useState('');
+  const [playerTurn, setPlayerTurn] = useState('Player A');
 
   useEffect(() => {
-    checkTie();
-    checkWin();
-  }, [board]);
-
-  const chooseSquare = async (square) => {
-    if (turn === player && board[square] === '') {
-      setTurn(player === 'X' ? 'O' : 'X');
-
-      await channel.sendEvent({ type: 'game-move', data: { square, player } });
-
-      setBoard(
-        board.map((val, idx) => {
-          if (idx === square && val === '') {
-            return player;
-          }
-          return val;
-        })
-      );
-    }
-  };
-
-  const checkWin = () => {
-    Patterns.forEach((currPattern) => {
-      const firstPlayer = board[currPattern[0]];
-      if (firstPlayer === '') return;
-
-      let foundWinningPattern = true;
-      currPattern.forEach((idx) => {
-        if (board[idx] != firstPlayer) {
-          foundWinningPattern = false;
-        }
-      });
-
-      if (foundWinningPattern) {
-        setResult({ winner: board[currPattern[0]], state: 'Won' });
-      }
-    });
-  };
-
-  const checkTie = () => {
-    let filled = true;
-    board.forEach((square) => {
-      if (square === '') {
-        filled = false;
-      }
+    socket.on('moveMade', (data) => {
+      setGame(data.updatedGame);
+      setPlayerTurn(data.updatedGame.currentPlayer);
+      setErrorMessage('');
     });
 
-    if (filled) {
-      setResult({ winner: 'none', state: 'tie' });
-    }
-  };
+    socket.on('gameReset', (newGame) => {
+      setGame(newGame);
+      setPlayerTurn('Player A');
+      setErrorMessage('');
+    });
 
-  channel.on((event) => {
-    if (event.type === 'game-move' && event.user.id !== client.userID) {
-      const currentPlayer = event.data.player === 'X' ? 'O' : 'X';
-      setPlayer(currentPlayer);
-      setTurn(currentPlayer);
-      setBoard(
-        board.map((val, idx) => {
-          if (idx === event.data.square && val === '') {
-            return event.data.player;
-          }
-          return val;
-        })
-      );
-    }
+    socket.on('connect_error', (error) => {
+      console.error('WebSocket connection error:', error.message);
+    });
+
+    socket.on('logged_out', (user) => {
+      console.error(user + ' has logged out!');
+      setUser('');
+      setIsAuth(false);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from server');
+    });
+
+    return () => {
+      socket.off('moveMade');
+      socket.off('gameReset');
+      socket.off('connect_error');
+      socket.off('disconnect');
+    };
   });
+
+  const calculateWinner = (squares) => {
+    for (let i = 0; i < Patterns.length; i++) {
+      const [a, b, c] = Patterns[i];
+      if (
+        squares[a] &&
+        squares[a] === squares[b] &&
+        squares[a] === squares[c]
+      ) {
+        return squares[a];
+      }
+    }
+
+    return null;
+  };
+
+  const makeMove = (index) => {
+    const squares = [...game.board];
+
+    if (calculateWinner(squares) || squares[index]) {
+      setErrorMessage('Invalid move. Please try again.');
+      return;
+    }
+
+    squares[index] = game.currentPlayer;
+
+    const updatedGame = {
+      ...game,
+      board: squares,
+      currentPlayer: game.currentPlayer === 'X' ? 'O' : 'X',
+    };
+
+    socket.emit('makeMove', { index, updatedGame });
+  };
+
+  const resetGame = () => {
+    const newGame = {
+      board: Array(9).fill(null),
+      currentPlayer: 'X',
+    };
+
+    socket.emit('resetGame', newGame);
+  };
+
+  const logout = () => {
+    socket.emit('logging_out', user);
+  };
+
+  const winner = calculateWinner(game.board);
   return (
-    <div>
-      <h1>Tic Tac Toe</h1>
-      <div className="board">
-        <div className="row">
-          <Square
-            chooseSquare={() => {
-              chooseSquare(0);
-            }}
-            val={board[0]}
-          />
-          <Square
-            chooseSquare={() => {
-              chooseSquare(1);
-            }}
-            val={board[1]}
-          />
-          <Square
-            chooseSquare={() => {
-              chooseSquare(2);
-            }}
-            val={board[2]}
-          />
+    <div className="app-container">
+      <h1>Welcome to Tic Tac Toe Game</h1>
+      <div>
+        <div className="board">
+          {game.board.map((cell, index) => (
+            <div
+              key={index}
+              className={`cell ${winner && winner === cell ? 'winner' : ''}`}
+              onClick={() => makeMove(index)}
+            >
+              {cell}
+            </div>
+          ))}
         </div>
-        <div className="row">
-          <Square
-            chooseSquare={() => {
-              chooseSquare(3);
-            }}
-            val={board[3]}
-          />
-          <Square
-            chooseSquare={() => {
-              chooseSquare(4);
-            }}
-            val={board[4]}
-          />
-          <Square
-            chooseSquare={() => {
-              chooseSquare(5);
-            }}
-            val={board[5]}
-          />
-        </div>
-        <div className="row">
-          <Square
-            chooseSquare={() => {
-              chooseSquare(6);
-            }}
-            val={board[6]}
-          />
-          <Square
-            chooseSquare={() => {
-              chooseSquare(7);
-            }}
-            val={board[7]}
-          />
-          <Square
-            chooseSquare={() => {
-              chooseSquare(8);
-            }}
-            val={board[8]}
-          />
-        </div>
+        <p className="current-player">
+          {winner ? `Player ${winner} wins!` : `Current Player: ${playerTurn}`}
+        </p>
+        <button className="reset-button" onClick={resetGame}>
+          Reset Game
+        </button>
+        <button className="reset-button" onClick={logout}>
+          Logout
+        </button>
       </div>
+      {errorMessage && <p className="error-message">{errorMessage}</p>}
     </div>
   );
 }
