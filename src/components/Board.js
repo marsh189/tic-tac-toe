@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 import { Patterns } from '../WinningPatters';
 
 function Board({ setIsAuth, setUser, user }) {
-  const socket = io(process.env.REACT_APP_LOCAL_URL);
+  const socket = io(process.env.REACT_APP_API_URL);
 
   const [game, setGame] = useState({
     board: Array(9).fill(null),

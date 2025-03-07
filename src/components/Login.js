@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { io } from 'socket.io-client';
 
 function Login({ setIsAuth, setUser, user }) {
-  const socket = io(process.env.REACT_APP_LOCAL_URL);
+  const socket = io(process.env.REACT_APP_API_URL);
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
